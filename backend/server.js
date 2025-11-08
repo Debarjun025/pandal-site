@@ -1,6 +1,5 @@
 require('dotenv').config();
 const express = require('express');
-const cors = require('cors');
 const db = require('./db');
 const fs = require('fs');
 const path = require('path');
@@ -19,15 +18,15 @@ const allowedOrigins = [
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   if (allowedOrigins.includes(origin)) {
-    res.header("Access-Control-Allow-Origin", origin);
+    res.setHeader("Access-Control-Allow-Origin", origin);
   }
-  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
-  res.header("Access-Control-Allow-Credentials", "true");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.setHeader("Access-Control-Allow-Credentials", "true");
 
-  // Handle preflight
+  // ✅ Always respond to OPTIONS preflight requests
   if (req.method === "OPTIONS") {
-    return res.sendStatus(200);
+    return res.status(204).end();
   }
   next();
 });
@@ -61,10 +60,19 @@ const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
     user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS, // Use App Password for Gmail
+    pass: process.env.EMAIL_PASS, // use App Password for Gmail
   },
 });
 app.set("mailer", transporter);
+
+// ----------------- CORS Debug Route -----------------
+app.get('/api/test-cors', (req, res) => {
+  res.json({
+    message: "✅ CORS test route working",
+    origin: req.headers.origin || "none",
+    headers: req.headers
+  });
+});
 
 // ----------------- Routes -----------------
 app.get('/', (req, res) => {
