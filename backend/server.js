@@ -9,26 +9,32 @@ const { authenticateToken, requireRole } = require('./middleware/auth');
 
 const app = express();
 
-// ----------------- Middleware -----------------
+// ----------------- CORS FIX (Top-most middleware) -----------------
+const allowedOrigins = [
+  "https://vivekanandaboysclub.vercel.app", // ✅ deployed frontend
+  "http://localhost:5173",                  // ✅ Vite local dev
+  "http://localhost:3000"                   // ✅ CRA fallback
+];
+
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.header("Access-Control-Allow-Origin", origin);
+  }
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.header("Access-Control-Allow-Credentials", "true");
+
+  // Handle preflight
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(200);
+  }
+  next();
+});
+
+// ----------------- JSON + URLENCODED -----------------
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-// ----------------- CORS Configuration (Updated for Render + Vercel) -----------------
-app.use(
-  cors({
-    origin: [
-      "https://vivekanandaboysclub.vercel.app", // ✅ your deployed frontend
-      "http://localhost:5173", // ✅ local dev (Vite)
-      "http://localhost:3000"  // ✅ optional fallback (CRA)
-    ],
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-    credentials: true,
-  })
-);
-
-// ✅ Handle preflight requests properly
-app.options("*", cors());
 
 // ----------------- DB Setup / Migrations -----------------
 const dbPath = path.join(__dirname, 'pandal.db');
@@ -48,8 +54,6 @@ if (!fs.existsSync(dbPath)) {
 // ----------------- Static Uploads -----------------
 const uploadDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
-
-// Serve uploaded files
 app.use('/uploads', express.static(uploadDir));
 
 // ----------------- Email Transporter -----------------
@@ -60,7 +64,6 @@ const transporter = nodemailer.createTransport({
     pass: process.env.EMAIL_PASS, // Use App Password for Gmail
   },
 });
-
 app.set("mailer", transporter);
 
 // ----------------- Routes -----------------
