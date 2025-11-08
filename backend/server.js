@@ -13,29 +13,22 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// ----------------- CORS Configuration -----------------
+// ----------------- CORS Configuration (Updated for Render + Vercel) -----------------
 app.use(
   cors({
-    origin: (origin, callback) => {
-      const allowedOrigins = [
-        "https://vivekanandaboysclub.vercel.app", // ✅ your deployed frontend
-        "http://localhost:5173", // ✅ local React dev (Vite default)
-        "http://localhost:3000"  // ✅ optional fallback (CRA)
-      ];
-
-      // allow requests with no origin (like mobile apps or curl)
-      if (!origin) return callback(null, true);
-
-      if (allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
-      }
-    },
+    origin: [
+      "https://vivekanandaboysclub.vercel.app", // ✅ your deployed frontend
+      "http://localhost:5173", // ✅ local dev (Vite)
+      "http://localhost:3000"  // ✅ optional fallback (CRA)
+    ],
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
   })
 );
+
+// ✅ Handle preflight requests properly
+app.options("*", cors());
 
 // ----------------- DB Setup / Migrations -----------------
 const dbPath = path.join(__dirname, 'pandal.db');
@@ -64,7 +57,7 @@ const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
     user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS, // use App Password for Gmail
+    pass: process.env.EMAIL_PASS, // Use App Password for Gmail
   },
 });
 
@@ -72,7 +65,7 @@ app.set("mailer", transporter);
 
 // ----------------- Routes -----------------
 app.get('/', (req, res) => {
-  res.json({ message: '🎉 Pandal backend running' });
+  res.json({ message: '🎉 Pandal backend running successfully!' });
 });
 
 app.use('/api/auth', require('./routes/auth'));
@@ -88,6 +81,6 @@ app.use((req, res) => {
 
 // ----------------- Start Server -----------------
 const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => {
-  console.log(`🚀 Server listening on port ${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Server running on port ${PORT}`);
 });
