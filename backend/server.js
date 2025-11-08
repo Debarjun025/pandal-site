@@ -4,9 +4,7 @@ const cors = require('cors');
 const db = require('./db');
 const fs = require('fs');
 const path = require('path');
-const nodemailer = require('nodemailer'); // ✅ added
-
-// Auth middleware (in case you need it at app-level later)
+const nodemailer = require('nodemailer');
 const { authenticateToken, requireRole } = require('./middleware/auth');
 
 const app = express();
@@ -15,16 +13,26 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Allow multiple frontend origins (React dev servers)
+// ----------------- CORS Configuration -----------------
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin || origin.startsWith("http://localhost")) {
+      const allowedOrigins = [
+        "https://vivekanandaboysclub.vercel.app", // ✅ your deployed frontend
+        "http://localhost:5173", // ✅ local React dev (Vite default)
+        "http://localhost:3000"  // ✅ optional fallback (CRA)
+      ];
+
+      // allow requests with no origin (like mobile apps or curl)
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
         callback(new Error("Not allowed by CORS"));
       }
     },
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     credentials: true,
   })
 );
@@ -48,10 +56,10 @@ if (!fs.existsSync(dbPath)) {
 const uploadDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
-// Serve proof/image uploads at http://localhost:4000/uploads/<filename>
+// Serve uploaded files
 app.use('/uploads', express.static(uploadDir));
 
-// ----------------- Email Transporter (for forgot password) -----------------
+// ----------------- Email Transporter -----------------
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
@@ -60,7 +68,6 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// make transporter accessible in routes
 app.set("mailer", transporter);
 
 // ----------------- Routes -----------------
@@ -68,7 +75,6 @@ app.get('/', (req, res) => {
   res.json({ message: '🎉 Pandal backend running' });
 });
 
-// ✅ Mount routes (includes forgot/reset password inside auth.js)
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/donors', require('./routes/donors'));
 app.use('/api/users', require('./routes/users'));
